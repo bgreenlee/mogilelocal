@@ -17,7 +17,7 @@ of the specific IOExceptions raised by the filesystem.  And public fields like
 ``domain`` and ``trackers`` will be accessible but have empty values.
 """
 
-import os, glob, md5, shutil, sys, urlparse
+import os, shutil, sys, urlparse
 from os import path as osp
 
 class MogileFSError(Exception):
@@ -34,40 +34,39 @@ class Client:
     setitem, delitem, and iter), and that's the preferred interface if you
     don't need to deal with bigfiles or storage classes.
     """
-
-    def __init__(self, dir, url):
+    def __init__(self, domain=None, hosts=None):
         """
         Creates a new MogileLocal client.  ``dir`` is the filesystem path where
         files will be stored, while ``url`` is a web-accessible URL that points
         to that directory.  No trailing slash on either.
 
-        >>> fsh = _make_test_client()
+        >>> datastore = _make_test_client()
 
         Here, _make_test_client is a helper function that just returns 
-        Client('/tmp/mogilelocal', 'http://localhost/mogilelocal'), for easy
+        Client('/tmp/mogilelocal', 'http://localhost:7500'), for easy
         doctesting.
 
-        >>> fsh.dir
+        >>> datastore.dir
         '/tmp/mogilelocal'
 
-        >>> fsh.url
-        'http://localhost/mogilelocal'
+        >>> datastore.url
+        'http://localhost:7500'
 
-        >>> fsh.domain
+        >>> datastore.domain
         'Local filesystem'
 
-        >>> fsh.trackers[0]
+        >>> datastore.trackers[0]
         'http://localhost:6001/'
 
-        >>> fsh.verify_data
+        >>> datastore.verify_data
         False
 
-        >>> fsh.verify_repcount
+        >>> datastore.verify_repcount
         False
 
         """
-        self.dir = dir
-        self.url = url
+        self.dir = "/tmp/mogilelocal"
+        self.url = "http://localhost:7500"
 
         self.domain = 'Local filesystem'
         self.trackers = ['http://localhost:6001/']
@@ -104,19 +103,19 @@ class Client:
         This performs basic sanitation so that you can't pass in parent
         directory references in a key and access the whole hard drive.
 
-        >>> fsh = _make_test_client()
-        >>> fsh._real_path('..')
+        >>> datastore = _make_test_client()
+        >>> datastore._real_path('..')
         Traceback (most recent call last):
         ValueError: Key ".." contains .. references
 
-        >>> fsh._real_path('foo/..')
+        >>> datastore._real_path('foo/..')
         Traceback (most recent call last):
         ValueError: Key "foo/.." contains .. references
 
-        >>> fsh._real_path('foo/..namme')
+        >>> datastore._real_path('foo/..namme')
         '/tmp/mogilelocal/foo/..namme'
 
-        >>> fsh._real_path('../whatever')
+        >>> datastore._real_path('../whatever')
         Traceback (most recent call last):
         ValueError: Key "../whatever" contains .. references
 
@@ -138,16 +137,16 @@ class Client:
         """
         Returns true if the key exists in the filesystem.
 
-        >>> fsh = _make_test_client()
-        >>> fsh['new_dir/test'] = 'This is a test'
-        >>> fsh['new_dir/test']
+        >>> datastore = _make_test_client()
+        >>> datastore['new_dir/test'] = 'This is a test'
+        >>> datastore['new_dir/test']
         'This is a test'
 
-        >>> 'new_dir/test' in fsh
+        >>> 'new_dir/test' in datastore
         True
 
-        >>> del fsh['new_dir/test']
-        >>> 'new_dir/test' in fsh
+        >>> del datastore['new_dir/test']
+        >>> 'new_dir/test' in datastore
         False
 
         """
@@ -194,20 +193,20 @@ class Client:
         """
         Sets the file ``data`` associated with ``key``.
 
-        >>> fsh = _make_test_client()
-        >>> fsh.set_file_data('test/subdir/temp.txt', 'Hello, world')
-        >>> fsh.get_file_data('test/subdir/temp.txt')
+        >>> datastore = _make_test_client()
+        >>> datastore.set_file_data('test/subdir/temp.txt', 'Hello, world')
+        >>> datastore.get_file_data('test/subdir/temp.txt')
         'Hello, world'
 
         Repeated calls simply change the contents of the file:
 
-        >>> fsh.set_file_data('test/subdir/temp.txt', 'This is a test')
-        >>> fsh.get_file_data('test/subdir/temp.txt')
+        >>> datastore.set_file_data('test/subdir/temp.txt', 'This is a test')
+        >>> datastore.get_file_data('test/subdir/temp.txt')
         'This is a test'
 
-        >>> fsh.delete('test/subdir/temp.txt')
+        >>> datastore.delete('test/subdir/temp.txt')
         True
-        >>> fsh.get_file_data('test/subdir/temp.txt')
+        >>> datastore.get_file_data('test/subdir/temp.txt')
 
         """
         try:
@@ -225,21 +224,21 @@ class Client:
         object pointing to it.  The other two arguments are unused, for API
         compatibility.
 
-        >>> fsh = _make_test_client()
-        >>> fp = fsh.new_file('test/new.txt')
+        >>> datastore = _make_test_client()
+        >>> fp = datastore.new_file('test/new.txt')
         >>> fp.write('A new file')
         >>> fp.close()
 
-        >>> fsh['test/new.txt']
+        >>> datastore['test/new.txt']
         'A new file'
-        >>> fsh.rename('test/new.txt', 'newer.txt')
+        >>> datastore.rename('test/new.txt', 'newer.txt')
         True
-        >>> fsh['newer.txt']
+        >>> datastore['newer.txt']
         'A new file'
-        >>> 'test/new.txt' in fsh
+        >>> 'test/new.txt' in datastore
         False
 
-        >>> fsh.delete('newer.txt')
+        >>> datastore.delete('newer.txt')
         True
 
         """
@@ -300,7 +299,7 @@ class Client:
         """
         return self.rename(fkey, tkey)
 
-    def rename_big(self, key, tkey):
+    def rename_big(self, fkey, tkey):
         """
         Rename all chunks of a multi-chunk file.
         """
@@ -310,11 +309,11 @@ class Client:
         """
         Returns the URL for a key, or an empty list of it doesn't exist.
 
-        >>> fsh = _make_test_client()
-        >>> fsh['new_dir/test'] = 'This is a test'
-        >>> fsh.get_paths('new_dir/test')
-        ['http://localhost/mogilelocal/new_dir/test']
-        >>> fsh.delete_small('new_dir/test')
+        >>> datastore = _make_test_client()
+        >>> datastore['new_dir/test'] = 'This is a test'
+        >>> datastore.get_paths('new_dir/test')
+        ['http://localhost:7500/new_dir/test']
+        >>> datastore.delete_small('new_dir/test')
         True
 
         """
@@ -327,54 +326,54 @@ class Client:
         Lists all keys beginning with ``prefix``.  Returns a tuple (after,
         list) where after is the last element of the returned list.
 
-        >>> fsh = _make_test_client()
-        >>> for i in xrange(10): fsh['test' + str(i)] = 'Test'
+        >>> datastore = _make_test_client()
+        >>> for i in xrange(10): datastore['test' + str(i)] = 'Test'
 
-        >>> fsh.list_keys('test')
+        >>> datastore.list_keys('test')
         ('test9', ['test0', 'test1', 'test2', 'test3', 'test4', 'test5', 'test6', 'test7', 'test8', 'test9'])
 
         A nonexistent key results in an empty list and a null string for after:
 
-        >>> fsh.list_keys('no matches here')
+        >>> datastore.list_keys('no matches here')
         ('', [])
 
         If ``after`` is specified, it starts the list at the key after
         ``after``.  
 
-        >>> fsh.list_keys('test', 'test4')
+        >>> datastore.list_keys('test', 'test4')
         ('test9', ['test5', 'test6', 'test7', 'test8', 'test9'])
 
-        >>> fsh.list_keys('test', 'foo')
+        >>> datastore.list_keys('test', 'foo')
         ('test9', ['test0', 'test1', 'test2', 'test3', 'test4', 'test5', 'test6', 'test7', 'test8', 'test9'])
 
-        >>> fsh.list_keys('test', 'test9')
+        >>> datastore.list_keys('test', 'test9')
         ('', [])
 
         If ``limit`` is specified, at most that many elements will be returned.  
 
-        >>> fsh.list_keys('test', None, 2)
+        >>> datastore.list_keys('test', None, 2)
         ('test1', ['test0', 'test1'])
 
-        >>> fsh.list_keys('test', 'test1', 2)
+        >>> datastore.list_keys('test', 'test1', 2)
         ('test3', ['test2', 'test3'])
 
-        >>> fsh.list_keys('test', 'test1', 12)
+        >>> datastore.list_keys('test', 'test1', 12)
         ('test9', ['test2', 'test3', 'test4', 'test5', 'test6', 'test7', 'test8', 'test9'])
-        >>> for key in fsh: del fsh[key]
+        >>> for key in datastore: del datastore[key]
 
         Slashes in key names shouldn't confuse list_keys:
 
-        >>> for i in xrange(3): fsh['test/%d.json' % i] = 'Test'
-        >>> fsh.list_keys('')
+        >>> for i in xrange(3): datastore['test/%d.json' % i] = 'Test'
+        >>> datastore.list_keys('')
         ('test/2.json', ['test/0.json', 'test/1.json', 'test/2.json'])
-        >>> fsh.list_keys('test/')
+        >>> datastore.list_keys('test/')
         ('test/2.json', ['test/0.json', 'test/1.json', 'test/2.json'])
-        >>> fsh.list_keys('test')
+        >>> datastore.list_keys('test')
         ('test/2.json', ['test/0.json', 'test/1.json', 'test/2.json'])
-        >>> fsh.list_keys('test/0')
+        >>> datastore.list_keys('test/0')
         ('test/0.json', ['test/0.json'])
 
-        >>> for key in fsh: del fsh[key]
+        >>> for key in datastore: del datastore[key]
 
         """
         path_prefix = self._real_path(prefix)
@@ -438,15 +437,15 @@ class Client:
         Sends ``source``, a file-like object or filename, to Mogile, setting it
         as ``key``.  Other arguments are unused and are for API compatibility.
 
-        >>> fsh = _make_test_client()
-        >>> fsh['copy_from'] = 'Test'
-        >>> fsh.send_file('copy_to', '/tmp/mogilelocal/copy_from')
+        >>> datastore = _make_test_client()
+        >>> datastore['copy_from'] = 'Test'
+        >>> datastore.send_file('copy_to', '/tmp/mogilelocal/copy_from')
         True
-        >>> fsh['copy_to']
+        >>> datastore['copy_to']
         'Test'
 
-        >>> del fsh['copy_to']
-        >>> del fsh['copy_from']
+        >>> del datastore['copy_to']
+        >>> del datastore['copy_from']
 
         """
 
@@ -468,24 +467,24 @@ class Client:
         Gets an iterator with the contents of the bigfile.  This returns the
         file data in increments of ``chunk_size``.
 
-        >>> fsh = _make_test_client()
-        >>> fsh['copy_from'] = 'This is a test.\nOf the emergency b-cast system.'
+        >>> datastore = _make_test_client()
+        >>> datastore['copy_from'] = 'This is a test.\nOf the emergency b-cast system.'
         >>> fp = open('/tmp/mogilelocal/copy_from')
-        >>> fsh.send_bigfile('copy_to', fp)
+        >>> datastore.send_bigfile('copy_to', fp)
         True
 
-        >>> fsh.get_bigfile_as_lines('copy_to').next()
+        >>> datastore.get_bigfile_as_lines('copy_to').next()
         'This is a test.\n'
 
-        >>> i = fsh.get_bigfile_iter('copy_to', 5)
+        >>> i = datastore.get_bigfile_iter('copy_to', 5)
         >>> i.next()
         'This '
         >>> i.next()
         'is a '
 
-        >>> fsh.delete_big('copy_to')
+        >>> datastore.delete_big('copy_to')
         True
-        >>> fsh.delete_small('copy_from')
+        >>> datastore.delete_small('copy_from')
         True
 
         """
@@ -552,6 +551,8 @@ class Admin:
         return True
 
 def _make_test_client():
-    return Client('/tmp/mogilelocal', 'http://localhost/mogilelocal')
+    return Client('/tmp/mogilelocal', 'http://localhost:7500')
 
-
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()
