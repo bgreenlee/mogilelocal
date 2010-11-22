@@ -43,20 +43,20 @@ class Client:
         >>> datastore = _make_test_client()
 
         Here, _make_test_client is a helper function that just returns 
-        Client('/tmp/mogilelocal', 'http://localhost:7500'), for easy
+        Client('/tmp/mogilelocal', 'http://127.0.0.1:7500'), for easy
         doctesting.
 
         >>> datastore.dir
         '/tmp/mogilelocal'
 
         >>> datastore.url
-        'http://localhost:7500'
+        'http://127.0.0.1:7500'
 
         >>> datastore.domain
         'Local filesystem'
 
         >>> datastore.trackers[0]
-        'http://localhost:6001/'
+        'http://127.0.0.1:6001/'
 
         >>> datastore.verify_data
         False
@@ -66,10 +66,10 @@ class Client:
 
         """
         self.dir = "/tmp/mogilelocal"
-        self.url = "http://localhost:7500"
+        self.url = "http://127.0.0.1:7500"
 
         self.domain = 'Local filesystem'
-        self.trackers = ['http://localhost:6001/']
+        self.trackers = ['http://127.0.0.1:6001/']
         self.backend = None
         self.admin = Admin(self.url)
         self.root = ''
@@ -312,7 +312,7 @@ class Client:
         >>> datastore = _make_test_client()
         >>> datastore['new_dir/test'] = 'This is a test'
         >>> datastore.get_paths('new_dir/test')
-        ['http://localhost:7500/new_dir/test']
+        ['http://127.0.0.1:7500/new_dir/test']
         >>> datastore.delete_small('new_dir/test')
         True
 
@@ -551,7 +551,7 @@ class Admin:
         return True
 
 def _make_test_client():
-    return Client('/tmp/mogilelocal', 'http://localhost:7500')
+    return Client('/tmp/mogilelocal', 'http://127.0.0.1:7500')
 
 if __name__ == "__main__":
     import doctest
