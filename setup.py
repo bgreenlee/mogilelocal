@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(
     name='MogileLocal',
-    version='0.9.0',
+    version='0.9.1',
     py_modules=['mogilelocal'],
     zip_safe=True,
 

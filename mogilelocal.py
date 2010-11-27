@@ -14,7 +14,7 @@ probably won't match up.
 Similarly, exact error messages are unlikely to be consistent, though I've
 tried to use the same class names so you can just catch MogileFSError instead
 of the specific IOExceptions raised by the filesystem.  And public fields like
-``domain`` and ``trackers`` will be accessible but have empty values.
+``domain`` and ``hosts`` will be accessible but have empty values.
 """
 
 import os, shutil, sys, urlparse
@@ -34,7 +34,8 @@ class Client:
     setitem, delitem, and iter), and that's the preferred interface if you
     don't need to deal with bigfiles or storage classes.
     """
-    def __init__(self, domain=None, hosts=None):
+    def __init__(self, domain="Local filesystem", 
+                 hosts=['http://127.0.0.1:7001/']):
         """
         Creates a new MogileLocal client.  ``dir`` is the filesystem path where
         files will be stored, while ``url`` is a web-accessible URL that points
@@ -55,8 +56,8 @@ class Client:
         >>> datastore.domain
         'Local filesystem'
 
-        >>> datastore.trackers[0]
-        'http://127.0.0.1:6001/'
+        >>> datastore.hosts[0]
+        'http://127.0.0.1:7001/'
 
         >>> datastore.verify_data
         False
@@ -68,8 +69,8 @@ class Client:
         self.dir = "/tmp/mogilelocal"
         self.url = "http://127.0.0.1:7500"
 
-        self.domain = 'Local filesystem'
-        self.trackers = ['http://127.0.0.1:6001/']
+        self.domain = domain
+        self.hosts = hosts
         self.backend = None
         self.admin = Admin(self.url)
         self.root = ''
@@ -87,7 +88,7 @@ class Client:
     def _ensure_dirs_exist(self, key):
         try:
             os.makedirs(osp.join(self.dir, osp.dirname(key)))
-        except OSError, e:
+        except OSError:
             pass
     
     def _copy_file_or_filename(self, fp_or_path, dest_key):
@@ -210,7 +211,7 @@ class Client:
 
         """
         try:
-            fp = self.new_file(key)
+            fp = self.new_file(key, cls)
             try:
                 fp.write(data)
             finally:
@@ -379,7 +380,7 @@ class Client:
         path_prefix = self._real_path(prefix)
         dir_prefix = osp.dirname(path_prefix)
         raw_list = []
-        for dirpath, dirnames, filenames in os.walk(self.dir):
+        for dirpath, _, filenames in os.walk(self.dir):
             if not dirpath.startswith(dir_prefix):
                 continue
             for file in filenames:
@@ -458,7 +459,7 @@ class Client:
         Sends the file-like object `source` to Mogile, storing it as `key`.
         """
         if not overwrite and key in self:
-            self.choke("pre file or info file for %s already exists" % key)
+            self.croak("pre file or info file for %s already exists" % key)
 
         return self.send_file(key, source, cls, chunksize)
 
