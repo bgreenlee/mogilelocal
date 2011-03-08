@@ -282,14 +282,32 @@ class Client:
 
     def rename(self, fkey, tkey):
         """
-        Rename a file from `fkey` to `tkey`.
+        Rename a file from `fkey` to `tkey`. `tkey` must not already exist.
+        
+        >>> datastore = _make_test_client()
+        >>> datastore.rename('test/does_not_exist.txt', 'test/new.txt')
+        False
+
+        >>> datastore.set_file_data('test/new.txt', 'A new file')
+        >>> datastore.rename('test/new.txt', 'test/newer.txt')
+        True
+
+        >>> datastore.set_file_data('test/new.txt', 'A new file')
+        >>> datastore.rename('test/new.txt', 'test/newer.txt')
+        False
+
+        >>> datastore.delete('test/new.txt')
+        True
+        >>> datastore.delete('test/newer.txt')
+        True
+
         """
         try:
-            if fkey in self:
+            if not fkey in self or tkey in self:
+                return False
+            else:
                 os.rename(self._real_path(fkey), self._real_path(tkey))
                 return True
-            else:
-                return False
         except OSError, e:
             return self.croak('OS error renaming %s to %s: %s' % 
                     (fkey, tkey, str(e)))
@@ -552,7 +570,7 @@ class Admin:
         return True
 
 def _make_test_client():
-    return Client('/tmp/mogilelocal', 'http://127.0.0.1:7500')
+    return Client()
 
 if __name__ == "__main__":
     import doctest
