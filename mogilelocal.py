@@ -74,7 +74,7 @@ class Client:
         self.backend = None
         self.admin = Admin(self.url)
         self.root = ''
-        self.cls = ''
+        self.clas = ''
         self.verify_data = False
         self.verify_repcount = False
 
@@ -157,7 +157,7 @@ class Client:
         return self.get_file_data(key)
 
     def __setitem__(self, key, data):
-        self.set_file_data(key, data, self.cls)
+        self.set_file_data(key, data, self.clas)
 
     def __delitem__(self, key):
         return self.delete(key)
@@ -190,7 +190,7 @@ class Client:
         except IOError, e:
             return self.croak('IO error retrieving %s: %s' % (key, str(e)))
 
-    def set_file_data(self, key, data, cls=None):
+    def set_file_data(self, key, data, clas=None):
         """
         Sets the file ``data`` associated with ``key``.
 
@@ -211,7 +211,7 @@ class Client:
 
         """
         try:
-            fp = self.new_file(key, cls)
+            fp = self.new_file(key, clas)
             try:
                 fp.write(data)
             finally:
@@ -219,7 +219,7 @@ class Client:
         except IOError, e:
             return self.croak('IO error saving to %s: %s' % (key, str(e)))
 
-    def new_file(self, key, cls=None, bytes=0):
+    def new_file(self, key, clas=None, bytes=0):
         """
         Creates a new file under the specified ``key`` and returns a File
         object pointing to it.  The other two arguments are unused, for API
@@ -451,7 +451,7 @@ class Client:
         else:
             fp.write(self[key])
 
-    def send_file(self, key, source, cls=None, blocksize=1024*1024):
+    def send_file(self, key, source, clas=None, blocksize=1024*1024):
         """
         Sends ``source``, a file-like object or filename, to Mogile, setting it
         as ``key``.  Other arguments are unused and are for API compatibility.
@@ -471,7 +471,7 @@ class Client:
         self._copy_file_or_filename(source, key)
         return True
 
-    def send_bigfile(self, key, source, cls=None, 
+    def send_bigfile(self, key, source, clas=None, 
                     description="", overwrite=True, chunksize=1024*1024*16):
         """
         Sends the file-like object `source` to Mogile, storing it as `key`.
@@ -479,7 +479,7 @@ class Client:
         if not overwrite and key in self:
             self.croak("pre file or info file for %s already exists" % key)
 
-        return self.send_file(key, source, cls, chunksize)
+        return self.send_file(key, source, clas, chunksize)
 
     def get_bigfile_iter(self, key, chunk_size=1024*1024):
         r"""
@@ -560,10 +560,10 @@ class Admin:
     def create_class(self, domain, clas, mindevcount):
         return True
 
-    def update_class(self, domain, cls, mindevcount):
+    def update_class(self, domain, clas, mindevcount):
         return True
 
-    def delete_class(self, domain, cls):
+    def delete_class(self, domain, clas):
         return True
 
     def change_device_state(self, host, device, state):
