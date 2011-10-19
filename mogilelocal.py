@@ -174,19 +174,48 @@ class Client:
             self[k] = default
             return default
 
-    def get_file_data(self, key):
+    def get_file_data(self, key, fp=None, **kwargs):
         """
         Retrieves the file data associated with ``key``.
+        If fp is given, the data is written to it.
+        **kwargs is added so that the method signature will be compatible with
+        mogilefs, which includes timeout and noverify parameters.
+
+        >>> datastore = _make_test_client()
+        >>> datastore.set_file_data('test/subdir/temp.txt', 'Hello, world')
+        >>> datastore.get_file_data('test/subdir/temp.txt')
+        'Hello, world'
+
+        timeout and noverify parameters can be provided, but are ignored:
+
+        >>> datastore.get_file_data('test/subdir/temp.txt', timeout=5, noverify=False)
+        'Hello, world'
+
+        A filehandle can be provided to output data to:
+
+        >>> import StringIO
+        >>> output_fp = StringIO.StringIO()
+        >>> datastore.get_file_data('test/subdir/temp.txt', output_fp)
+        True
+        >>> output_fp.getvalue()
+        'Hello, world'
+        >>> datastore.delete('test/subdir/temp.txt')
+        True
         """
         if key not in self:
             return None
-
+        
         try:
-            fp = open(self._real_path(key))
+            input_fp = open(self._real_path(key))
             try:
-                return fp.read()
+                data = input_fp.read()
+                if fp is None:
+                    return data
+                else:
+                    fp.write(data)
+                    return True
             finally:
-                fp.close()
+                input_fp.close()
         except IOError, e:
             return self.croak('IO error retrieving %s: %s' % (key, str(e)))
 
